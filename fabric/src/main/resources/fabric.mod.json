@@ -10,7 +10,7 @@
   "contact": {
     "sources": "https://github.com/Layers-of-Railways/Railway/"
   },
-  "license": ["MIT"],
+  "license": ["LGPL v3"],
   "icon": "assets/railways/icon.png",
   "environment": "*",
   "entrypoints": {
@@ -23,8 +23,8 @@
     "fabric-datagen": [
       "com.railwayteam.railways.fabric.RailwaysDataFabric"
     ],
-    "journeymap": [
-      "com.railwayteam.railways.compat.journeymap.RailwayMapPlugin"
+    "emi": [
+      "com.railwayteam.railways.compat.emi.fabric.RailwaysEmiPlugin"
     ],
     "mm:early_risers": [
       "com.railwayteam.railways.fabric.EarlyRiser"
@@ -38,7 +38,7 @@
     "minecraft": "${minecraft_version}",
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": ">=${fabric_api_version}",
-    "create": "${create_fabric_version}"
+    "create": "${create_fabric_version_range}"
   },
   "custom": {
     "modmenu": {

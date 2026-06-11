@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2025 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -20,6 +20,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import dev.architectury.plugin.ArchitectPluginExtension
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import me.modmuss50.mpp.ModPublishExtension
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RemapJarTask
 import org.objectweb.asm.ClassReader
@@ -32,12 +33,14 @@ import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.zip.Deflater
+import dev.ithundxr.silk.ChangelogText
+import me.modmuss50.mpp.ReleaseType
 
 plugins {
     java
     `maven-publish`
     id("architectury-plugin") version "3.4-SNAPSHOT"
-    id("dev.architectury.loom") version "1.9.+" apply false
+    id("dev.architectury.loom") version "1.11.+" apply false
     id("me.modmuss50.mod-publish-plugin") version "0.7.4" apply false // https://github.com/modmuss50/mod-publish-plugin
     id("com.github.johnrengelman.shadow") version "8.1.1" apply false
     id("dev.ithundxr.silk") version "0.11.15" // https://github.com/IThundxr/silk
@@ -49,10 +52,22 @@ println("Steam 'n' Rails v${"mod_version"()}")
 
 val isRelease = System.getenv("RELEASE_BUILD")?.toBoolean() ?: false
 val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toInt()
+// whether dev mixins should be stripped, even if it's not a release build
 val removeDevMixinAnyway = System.getenv("REMOVE_DEV_MIXIN_ANYWAY")?.toBoolean() ?: false
+// whether the build should include dev commands, even in a non-dev environment
+val includeDevCommands = !isRelease && System.getenv("INCLUDE_DEV_COMMANDS")?.toBoolean() ?: false
 val gitHash = "\"${calculateGitHash() + (if (hasUnstaged()) "-modified" else "")}\""
 
+if (!isRelease && removeDevMixinAnyway) {
+    println("Removing dev mixins, even though it's not a release build")
+}
+
+if (includeDevCommands) {
+    println("Including dev commands in build")
+}
+
 extra["gitHash"] = gitHash
+extra["includeDevCommands"] = includeDevCommands
 
 architectury {
     minecraft = "minecraft_version"()
@@ -62,6 +77,12 @@ allprojects {
     apply(plugin = "java")
     apply(plugin = "architectury-plugin")
     apply(plugin = "maven-publish")
+
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
+    }
 
     base.archivesName.set("archives_base_name"())
     group = "maven_group"()
@@ -163,7 +184,7 @@ subprojects {
         platformSetupLoomIde()
     }
 
-    tasks.named<RemapJarTask>("remapJar") {
+    val remapJar = tasks.named<RemapJarTask>("remapJar") {
         from("${rootProject.projectDir}/LICENSE")
         val shadowJar = project.tasks.named<ShadowJar>("shadowJar").get()
         inputFile.set(shadowJar.archiveFile)
@@ -206,6 +227,9 @@ subprojects {
         // Trim -build.X+mcX.XX.X from version string
         //val createFabricVersion: String = Regex("(\\d+\\.\\d+\\.\\d+-\\w)").find("create_fabric_version"())?.value.toString()
 
+        val createForgeVersion = "create_forge_version"().split("-")[0]
+        val createForgeVersionRange = (rootProject.ext["create_forge_version_range"] as String?) ?: createForgeVersion
+
         // set up properties for filling into metadata
         val properties = mapOf(
                 "version" to version,
@@ -214,8 +238,10 @@ subprojects {
                 "fabric_loader_version" to "fabric_loader_version"(),
                 "voicechat_api_version" to "voicechat_api_version"(),
                 "forge_version" to "forge_version"().split(".")[0], // only specify major version of forge
-                "create_forge_version" to "create_forge_version"().split("-")[0],
-                "create_fabric_version" to "create_fabric_version"()
+                "create_forge_version" to createForgeVersion,
+                "create_forge_version_range" to createForgeVersionRange,
+                "create_fabric_version" to "create_fabric_version"(),
+                "create_fabric_version_range" to "create_fabric_version_range"(),
         )
 
         inputs.properties(properties)
@@ -246,6 +272,59 @@ subprojects {
     components.getByName<AdhocComponentWithVariants>("java") {
         withVariantsFromConfiguration(project.configurations["shadowRuntimeElements"]) {
             skip()
+        }
+    }
+
+    val isFabric = project.name == "fabric"
+    val releaseType =
+        if (version.toString().contains("alpha")) {
+            ReleaseType.ALPHA;
+        } else if (version.toString().contains("beta")) {
+            ReleaseType.BETA;
+        } else {
+            ReleaseType.STABLE;
+        }
+    configure<ModPublishExtension> {
+        file.set(remapJar.get().archiveFile)
+        version.set(project.version.toString())
+        changelog = ChangelogText.getChangelogText(rootProject).toString()
+        type = releaseType
+        displayName = "Steam 'n' Rails ${"mod_version"()} $capitalizedName ${"minecraft_version"()} C${"create_display_version"()}"
+        if (isFabric) {
+            modLoaders.add("fabric")
+            modLoaders.add("quilt")
+        } else {
+            modLoaders.add("forge")
+            modLoaders.add("neoforge")
+        }
+
+        val createVersionType = if (project.name == "fabric") "create-fabric" else "create"
+        curseforge {
+            projectId = "curseforge_id"()
+            accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+            minecraftVersions.add("minecraft_version"())
+
+            requires {
+                slug = createVersionType
+            }
+
+            if (isFabric) {
+                requires("fabric-api")
+            }
+        }
+
+        modrinth {
+            projectId = "modrinth_id"()
+            accessToken = providers.environmentVariable("MODRINTH_TOKEN")
+            minecraftVersions.add("minecraft_version"())
+
+            requires {
+                slug = createVersionType
+            }
+
+            if (isFabric) {
+                requires("fabric-api")
+            }
         }
     }
 }
@@ -346,12 +425,12 @@ fun Project.setupRepositories() {
     repositories {
         mavenCentral()
         maven("https://maven.createmod.net") // Create, Ponder, Flywheel
+        maven("https://modmaven.dev/") // flywheel fabric
         maven("https://maven.shedaniel.me/") // Cloth Config, REI
         maven("https://maven.blamejared.com/") // JEI, Hex Casting
         exclusiveMaven("https://maven.parchmentmc.org", "org.parchmentmc.data") // Parchment mappings
         exclusiveMaven("https://maven.quiltmc.org/repository/release", "org.quiltmc") // Quilt Mappings
-        maven("https://jm.gserv.me/repository/maven-public/") // JourneyMap API
-        exclusiveMaven("https://api.modrinth.com/maven", "maven.modrinth") // LazyDFU, JourneyMap
+        exclusiveMaven("https://api.modrinth.com/maven", "maven.modrinth") // LazyDFU
         exclusiveMaven("https://cursemaven.com", "curse.maven")
         maven("https://maven.theillusivec4.top/") // Curios
         maven("https://maven.ithundxr.dev/mirror") { // Registrate
@@ -383,7 +462,7 @@ fun calculateGitHash(): String {
             commandLine("git", "rev-parse", "HEAD")
         }
         return output.standardOutput.asText.get().trim()
-    } catch(ignored: Throwable) {
+    } catch(_: Throwable) {
         return "unknown"
     }
 }
@@ -394,7 +473,7 @@ fun calculateGitBranch(): String {
             commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
         }
         return output.standardOutput.asText.get().trim()
-    } catch(ignored: Throwable) {
+    } catch(_: Throwable) {
         return "unknown"
     }
 }
@@ -408,7 +487,7 @@ fun hasUnstaged(): Boolean {
         if (result.isNotEmpty())
             println("Found stageable results:\n${result}\n")
         return result.isNotEmpty()
-    }  catch(ignored: Throwable) {
+    }  catch(_: Throwable) {
         return false
     }
 }

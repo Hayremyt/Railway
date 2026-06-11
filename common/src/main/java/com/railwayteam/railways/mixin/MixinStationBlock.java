@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2025 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -21,8 +21,10 @@ package com.railwayteam.railways.mixin;
 import com.railwayteam.railways.config.CRConfigs;
 import com.railwayteam.railways.content.conductor.ConductorEntity;
 import com.railwayteam.railways.mixin_interfaces.ICarriageConductors;
+import com.railwayteam.railways.multiloader.PlayerSelection;
 import com.railwayteam.railways.registry.CRBlocks;
 import com.railwayteam.railways.registry.CREntities;
+import com.railwayteam.railways.registry.CRPackets;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.kinetics.deployer.DeployerFakePlayer;
 import com.simibubi.create.content.trains.entity.Carriage;
@@ -34,12 +36,14 @@ import com.simibubi.create.content.trains.schedule.destination.DestinationInstru
 import com.simibubi.create.content.trains.station.GlobalStation;
 import com.simibubi.create.content.trains.station.StationBlock;
 import com.simibubi.create.content.trains.station.StationBlockEntity;
+import com.simibubi.create.content.trains.station.TrainEditPacket;
 import net.createmod.catnip.math.VecHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -48,6 +52,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.NameTagItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -258,5 +263,30 @@ public abstract class MixinStationBlock {
         itemEntity.setDeltaMovement(Vec3.ZERO);
         te.getLevel()
             .addFreshEntity(itemEntity);
+    }
+
+    @Inject(method = "use", at = @At("HEAD"), cancellable = true, remap = true)
+    private void deployersNameTag(BlockState pState, Level pLevel, BlockPos pPos, Player pPlayer, InteractionHand pHand, BlockHitResult pHit, CallbackInfoReturnable<InteractionResult> cir) {
+        ItemStack itemInHand = pPlayer.getItemInHand(pHand);
+        if (!pLevel.isClientSide && pPlayer instanceof DeployerFakePlayer
+            && pLevel.getBlockEntity(pPos) instanceof StationBlockEntity stationBe
+            && itemInHand.getItem() instanceof NameTagItem
+        ) {
+            cir.setReturnValue(InteractionResult.CONSUME);
+            GlobalStation station = stationBe.getStation();
+            if (station == null || station.getPresentTrain() == null) return;
+
+            Train train = station.getPresentTrain();
+            if (itemInHand.hasCustomHoverName()) { // Set the train name
+                String newName = itemInHand.getHoverName().getString();
+                if (train.name.getString().equals(newName)) return;
+
+                train.name = Component.literal(newName);
+                CRPackets.PACKETS.sendTo(PlayerSelection.all(),
+                    new TrainEditPacket.TrainEditReturnPacket(train.id, newName, train.icon.getId(), train.mapColorIndex));
+            } else { // Get the train's name and put it on the nametag
+                itemInHand.setHoverName(Component.literal(train.name.getString()));
+            }
+        }
     }
 }

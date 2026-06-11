@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2025 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -28,8 +28,11 @@ import com.simibubi.create.content.trains.track.BezierConnection;
 import com.simibubi.create.content.trains.track.BezierConnection.SegmentAngles;
 import com.simibubi.create.content.trains.track.TrackMaterial.TrackType;
 import dev.engine_room.flywheel.api.instance.InstancerProvider;
+import dev.engine_room.flywheel.api.material.CardinalLightingMode;
 import dev.engine_room.flywheel.lib.instance.InstanceTypes;
 import dev.engine_room.flywheel.lib.instance.TransformedInstance;
+import dev.engine_room.flywheel.lib.material.LightShaders;
+import dev.engine_room.flywheel.lib.material.SimpleMaterial;
 import dev.engine_room.flywheel.lib.model.ModelUtil;
 import dev.engine_room.flywheel.lib.model.SimpleModel;
 import dev.engine_room.flywheel.lib.model.baked.BakedModelBuilder;
@@ -44,7 +47,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -60,7 +63,7 @@ import static com.railwayteam.railways.util.MathUtils.copy;
 
 public abstract class CasingRenderUtils {
 
-    private static final HashMap<Pair<PartialModel, SlabBlock>, PartialModel> reTexturedModels = new HashMap<>();
+    private static final HashMap<Pair<PartialModel, Block>, PartialModel> reTexturedModels = new HashMap<>();
 
     public static void clearModelCache() {
         reTexturedModels.clear();
@@ -68,11 +71,11 @@ public abstract class CasingRenderUtils {
         Minecraft.getInstance().levelRenderer.allChanged();
     }
 
-    public static PartialModel reTexture(PartialModel model, SlabBlock block) {
-        Pair<PartialModel, SlabBlock> key = Pair.of(model, block);
+    public static PartialModel reTexture(PartialModel model, Block block) {
+        Pair<PartialModel, Block> key = Pair.of(model, block);
         if (!reTexturedModels.containsKey(key)) {
-            BakedModel slabModel = Minecraft.getInstance().getModelManager().getBlockModelShaper().getBlockModel(block.defaultBlockState());
-            BakedModel texturedCasing = new SpriteCopyingBakedModel(model.get(), slabModel);
+            BakedModel blockModel = Minecraft.getInstance().getModelManager().getBlockModelShaper().getBlockModel(block.defaultBlockState());
+            BakedModel texturedCasing = new SpriteCopyingBakedModel(model.get(), blockModel);
             PartialModel texturedPartial = RuntimeFakePartialModel.make(Railways.asResource("runtime_casing"), texturedCasing);
             reTexturedModels.put(key, texturedPartial);
             return texturedPartial;
@@ -83,7 +86,7 @@ public abstract class CasingRenderUtils {
 
     public static void renderBezierCasings(PoseStack ms, Level level, PartialModel texturedPartial, BlockState state, VertexConsumer vb, BezierConnection bc) {
         int heightDiff = Math.abs(bc.bePositions.get(false).getY() - bc.bePositions.get(true).getY());
-        double shiftDown = ((IHasTrackCasing) bc).isAlternate() && heightDiff > 0 ? -0.25 : 0;
+        double shiftDown = ((IHasTrackCasing) bc).railways$isAlternate() && heightDiff > 0 ? -0.25 : 0;
         if (heightDiff / bc.getLength() <= 4 / 30d) {
             for (Vec3 pos : casingPositions(bc)) {
                 ms.pushPose();
@@ -101,20 +104,19 @@ public abstract class CasingRenderUtils {
         } else {
             ms.pushPose();
             BlockPos tePosition = bc.bePositions.getFirst();
-            SegmentAngles[] segments = bc.getBakedSegments();
+            SegmentAngles segments = bc.getBakedSegments();
 
             TransformStack.of(ms)
                     .nudge((int) tePosition.asLong());
 
             for (int i = 1; i < segments.length; i++) {
                 if (i % 2 == 0) continue;
-                SegmentAngles segment = segments[i];
-                int light = LevelRenderer.getLightColor(level, segment.lightPosition.offset(tePosition));
-                Matrix4f pose = copy(segment.tieTransform.pose());
+                int light = LevelRenderer.getLightColor(level, segments.lightPosition[i].offset(tePosition));
+                Matrix4f pose = copy(segments.tieTransform[i].pose());
                 pose.translate(new Vector3f(0, (i % 4) * 0.001f, 0));
                 CachedBuffers.partial(texturedPartial, state)
                         .mulPose(pose)
-                        .mulNormal(segment.tieTransform.normal())
+                        .mulNormal(segments.tieTransform[i].normal())
                         .translate(0, shiftDown, 0)
                         .scale(1.02f)
                         .light(light)
@@ -124,7 +126,7 @@ public abstract class CasingRenderUtils {
                 if (trackType == WIDE_GAUGE) {
                     for (boolean first : Iterate.trueAndFalse) {
                         for (boolean inner : Iterate.trueAndFalse) {
-                            Pose transform = segment.railTransforms.get(first);
+                            Pose transform = segments.railTransforms[i].get(first);
                             Matrix4f pose2 = copy(transform.pose());
                             pose2.translate(new Vector3f(0, (i % 4) * 0.001f, 0));
                             CachedBuffers.partial(texturedPartial, state)
@@ -137,7 +139,7 @@ public abstract class CasingRenderUtils {
                     }
                 } else {
                     for (boolean first : Iterate.trueAndFalse) {
-                        Pose transform = segment.railTransforms.get(first);
+                        Pose transform = segments.railTransforms[i].get(first);
                         Matrix4f pose2 = copy(transform.pose());
                         pose2.translate(new Vector3f(0, (i % 4) * 0.001f, 0));
                         CachedBuffers.partial(texturedPartial, state)
@@ -183,10 +185,15 @@ public abstract class CasingRenderUtils {
         return positions.stream().toList();
     }
 
-    public static TransformedInstance makeCasingInstance(PartialModel baseModel, SlabBlock slabBlock, InstancerProvider instancerProvider) {
-        PartialModel texturedPartial = reTexture(baseModel, slabBlock);
+    public static TransformedInstance makeCasingInstance(PartialModel baseModel, Block casingBlock, InstancerProvider instancerProvider) {
+        PartialModel texturedPartial = reTexture(baseModel, casingBlock);
         SimpleModel model = BakedModelBuilder.create(texturedPartial.get())
-                .materialFunc((renderType, aBoolean) -> ModelUtil.getMaterial(RenderType.cutoutMipped(), aBoolean))
+                .materialFunc((renderType, shaded) ->
+					SimpleMaterial.builderOf(ModelUtil.getMaterial(RenderType.cutoutMipped(), shaded))
+						.light(LightShaders.FLAT)
+						.cardinalLightingMode(shaded ? CardinalLightingMode.CHUNK : CardinalLightingMode.OFF)
+						.build()
+				)
                 .build();
         return instancerProvider.instancer(InstanceTypes.TRANSFORMED, model)
                 .createInstance();

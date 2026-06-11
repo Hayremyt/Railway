@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2025 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -16,9 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dev.ithundxr.silk.ChangelogText
-import me.modmuss50.mpp.ReleaseType
-
 architectury.forge()
 
 loom {
@@ -31,6 +28,13 @@ loom {
 
         convertAccessWideners = true
         extraAccessWideners.add(loom.accessWidenerPath.get().asFile.name)
+
+        log4jConfigs.setFrom(project(":forge").file("log4j.xml"))
+
+        runs.configureEach {
+            // force proper color logs
+            vmArg("-Dterminal.jline=true")
+        }
     }
 
     runs.configureEach {
@@ -51,9 +55,8 @@ dependencies {
     // Development QOL
     modLocalRuntime("dev.emi:emi-forge:${"emi_version"()}")
 
-    // Test with JourneyMap in dev
-    modLocalRuntime("maven.modrinth:journeymap:${"journeymap_version"()}-forge")
-    modCompileOnly("info.journeymap:journeymap-api:${"journeymap_api_version"()}-SNAPSHOT") // for some reason this is needed explicitly
+    modCompileOnly("mezz.jei:jei-${"minecraft_version"()}-forge-api:${"jei_forge_version"()}")
+    modLocalRuntime("mezz.jei:jei-${"minecraft_version"()}-forge:${"jei_forge_version"()}")
 
     modCompileOnly("de.maxhenkel.voicechat:voicechat-api:${"voicechat_api_version"()}")
 
@@ -105,34 +108,8 @@ dependencies {
         modLocalRuntime("curse.maven:securitycraft-64760:${"sc_version"()}")
     }
 
-    compileOnly("io.github.llamalad7:mixinextras-common:${"mixin_extras_version"()}")
-    annotationProcessor(implementation(include("io.github.llamalad7:mixinextras-forge:${"mixin_extras_version"()}")!!)!!)
-}
-
-publishMods {
-    file = tasks.remapJar.get().archiveFile
-    version.set(project.version.toString())
-    changelog = ChangelogText.getChangelogText(rootProject).toString()
-    type = ReleaseType.valueOf(System.getenv().getOrDefault("RELEASE_TYPE", "STABLE"))
-    displayName = "Steam 'n' Rails ${"mod_version"()} Forge ${"minecraft_version"()}"
-    modLoaders.add("forge")
-    modLoaders.add("neoforge")
-
-    curseforge {
-        projectId = "curseforge_id"()
-        accessToken = System.getenv("CURSEFORGE_TOKEN")
-        minecraftVersions.add("minecraft_version"())
-
-        requires("create")
-    }
-
-    modrinth {
-        projectId = "modrinth_id"()
-        accessToken = System.getenv("MODRINTH_TOKEN")
-        minecraftVersions.add("minecraft_version"())
-
-        requires("create")
-    }
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${"mixin_extras_version"()}")!!)!!
+    implementation(include("io.github.llamalad7:mixinextras-forge:${"mixin_extras_version"()}")!!)!!
 }
 
 operator fun String.invoke(): String {

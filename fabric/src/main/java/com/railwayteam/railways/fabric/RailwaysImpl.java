@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2024 The Railways Team
+ * Copyright (c) 2022-2025 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -18,11 +18,11 @@
 
 package com.railwayteam.railways.fabric;
 
-import com.mojang.brigadier.CommandDispatcher;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.config.fabric.CRConfigsImpl;
 import com.railwayteam.railways.content.fuel.tank.FuelTankBlock;
 import com.railwayteam.railways.fabric.events.CommonEventsFabric;
+import com.railwayteam.railways.multiloader.CommandRegistrar;
 import com.railwayteam.railways.registry.fabric.CRBlockEntitiesImpl;
 import com.railwayteam.railways.registry.fabric.CRBlocksImpl;
 import com.railwayteam.railways.registry.fabric.CRMountedStorageTypesImpl;
@@ -32,13 +32,10 @@ import com.simibubi.create.api.contraption.BlockMovementChecks;
 import com.simibubi.create.api.contraption.BlockMovementChecks.CheckResult;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-
-import java.util.function.BiConsumer;
 
 public class RailwaysImpl implements ModInitializer {
 	@Override
@@ -51,10 +48,11 @@ public class RailwaysImpl implements ModInitializer {
 
 	public static void finalizeRegistrate() {
 		Railways.registrate().register();
+		Railways.postRegistrationInit();
 	}
 
-	public static void registerCommands(BiConsumer<CommandDispatcher<CommandSourceStack>, Boolean> consumer) {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> consumer.accept(dispatcher, environment.includeDedicated));
+	public static void registerCommands(CommandRegistrar registrar) {
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> registrar.register(dispatcher, environment.includeDedicated, registryAccess));
 	}
 
 	public static void platformBasedRegistration() {

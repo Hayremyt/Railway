@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2025 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -19,10 +19,12 @@
 package com.railwayteam.railways.registry;
 
 import com.railwayteam.railways.Railways;
+import com.railwayteam.railways.registry.CRPalettes.PalettesColorList;
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.track.TrackMaterial.TrackType;
 import com.simibubi.create.content.trains.track.TrackShape;
 import dev.engine_room.flywheel.lib.model.baked.PartialModel;
+import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.lang.Lang;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.DyeColor;
@@ -446,6 +448,7 @@ public class CRBlockPartials {
 
     public static final PartialModel
         WIDE_SCOTCH_FRAME = block("bogey/wide/scotch_yoke/frame"),
+        WIDE_SCOTCH_BELT = block("bogey/wide/scotch_yoke/belt"), // FIXME: UVs are rotated 180 degrees right now
         WIDE_SCOTCH_PINS = block("bogey/wide/scotch_yoke/pins"),
         WIDE_SCOTCH_PISTONS = block("bogey/wide/scotch_yoke/pistons"),
         WIDE_SCOTCH_WHEELS = block("bogey/wide/scotch_yoke/wheels")
@@ -526,12 +529,34 @@ public class CRBlockPartials {
     public static final PartialModel DIESEL_STACK_FAN = block("smokestack/block_diesel_fan");
     public static final PartialModel CONDUCTOR_ANTENNA = block("conductor_antenna");
 
+    public static final PalettesColorList<Couple<Couple<PartialModel>>> FOLDING_DOORS = new PalettesColorList<>(
+        color -> Couple.createWithContext(windowed -> Couple.createWithContext(left -> {
+            String side = left ? "left" : "right";
+            String windowStr = windowed ? "_windowed" : "";
+            return block("palettes/" + color.getSerializedName() + "/folding_door/fold_" + side + windowStr);
+        }))
+    );
+
+    public static final PartialModel PAINT_STRIPPER_BLOB = item("palettes/paint_blob/sand");
+
+    public static final PalettesColorList<PartialModel> PAINT_BLOBS = new PalettesColorList<>(
+        color -> item("palettes/paint_blob/" + color.getSerializedName())
+    );
+
+    public static final PalettesColorList<PartialModel> FLYWHEELS = new PalettesColorList<>(
+        color -> block("palettes/flywheel/" + color.getSerializedName() + "/block")
+    );
+
     private static PartialModel createBlock(String path) {
         return PartialModel.of(Create.asResource("block/" + path));
     }
 
     private static PartialModel block(String path) {
         return PartialModel.of(Railways.asResource("block/" + path));
+    }
+
+    private static PartialModel item(String path) {
+        return PartialModel.of(Railways.asResource("item/" + path));
     }
 
     static {

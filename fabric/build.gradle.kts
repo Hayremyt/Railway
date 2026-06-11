@@ -16,9 +16,6 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import dev.ithundxr.silk.ChangelogText
-import me.modmuss50.mpp.ReleaseType
-
 architectury.fabric()
 
 loom {
@@ -45,7 +42,7 @@ dependencies {
     modImplementation("net.fabricmc.fabric-api:fabric-api:${"fabric_api_version"()}")
 
     // Create - dependencies are added transitively
-    modImplementation("com.simibubi.create:create-fabric-${"minecraft_version"()}:${"create_fabric_version"()}")
+    modImplementation("com.simibubi.create:create-fabric:${"create_fabric_version"()}")
 
     modImplementation("net.createmod.ponder:Ponder-Fabric-${"minecraft_version"()}:${"ponder_version"()}")
 
@@ -60,12 +57,8 @@ dependencies {
     modLocalRuntime("maven.modrinth:lazydfu:${"lazydfu_version"()}")
     modLocalRuntime("com.terraformersmc:modmenu:${"modmenu_version"()}")
 
+    modCompileOnly("dev.emi:emi-fabric:${"emi_version"()}:api") { isTransitive = false }
     modLocalRuntime("dev.emi:emi-fabric:${"emi_version"()}")
-
-    modLocalRuntime("maven.modrinth:journeymap:${"journeymap_version"()}-fabric") // Test with JourneyMap in dev
-    modLocalRuntime("info.journeymap:journeymap-api:${"journeymap_api_version"()}-fabric-SNAPSHOT") // API is a JiJ on fabric, add manually
-
-    modCompileOnly("info.journeymap:journeymap-api:${"journeymap_api_version"()}-fabric-SNAPSHOT") // for some reason this is needed explicitly
 
     modCompileOnly("de.maxhenkel.voicechat:voicechat-api:${"voicechat_api_version"()}")
 
@@ -106,34 +99,9 @@ dependencies {
         modLocalRuntime("org.anarres:jcpp:1.4.14")
         modLocalRuntime("io.github.douira:glsl-transformer:2.0.0-pre13")
     }
-}
 
-publishMods {
-    file = tasks.remapJar.get().archiveFile
-    version.set(project.version.toString())
-    changelog = ChangelogText.getChangelogText(rootProject).toString()
-    type = ReleaseType.valueOf(System.getenv().getOrDefault("RELEASE_TYPE", "STABLE"))
-    displayName = "Steam 'n' Rails ${"mod_version"()} Fabric ${"minecraft_version"()}"
-    modLoaders.add("fabric")
-    modLoaders.add("quilt")
-
-    curseforge {
-        projectId = "curseforge_id"()
-        accessToken = System.getenv("CURSEFORGE_TOKEN")
-        minecraftVersions.add("minecraft_version"())
-
-        requires("fabric-api")
-        requires("create-fabric")
-    }
-
-    modrinth {
-        projectId = "modrinth_id"()
-        accessToken = System.getenv("MODRINTH_TOKEN")
-        minecraftVersions.add("minecraft_version"())
-
-        requires("fabric-api")
-        requires("create-fabric")
-    }
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${"mixin_extras_version"()}")!!)!!
+    implementation(include("io.github.llamalad7:mixinextras-fabric:${"mixin_extras_version"()}")!!)!!
 }
 
 operator fun String.invoke(): String {

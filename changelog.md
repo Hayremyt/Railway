@@ -1,10 +1,102 @@
 ------------------------------------------------------
+Steam 'n' Rails 1.7.2
+------------------------------------------------------
+Additions
+- `Unbreakable: 1b` tag on paint pitchers makes them infinite-use for potato cannons and paintbrushes
+- `/snr fill_paint` command to mass-recolor a volume of blocks, optionally filtered by block state or color
+- `/snr count_paint` command to count the number of blocks of a certain color in a volume, optionally filtered by block state
+
+Fixes
+- Fix infinite paint for projectiles launched from potato cannons on forge
+- Make woodburner smokestacks stackable in full block increments
+- Fix client crash when rendering signal highlighter for signal without a track #744
+- Fix KubeJS incompatibility with fluid amount mangling #746
+- Fix crash when using a potato cannon without ammunition #743
+- Fix fuel tank crash
+------------------------------------------------------
+Steam 'n' Rails 1.7.1
+------------------------------------------------------
+Fixes
+- Fix datafixer that crashed on worlds that hadn't been loaded with an indev version of 1.7.0
+- Fix mixin to Create to access its registrate that crashed depending on mod load order on forge
+------------------------------------------------------
+Steam 'n' Rails 1.7.0
+------------------------------------------------------
+Additions
+- Deployers can copy train names to/from nametags (pr#576 by SofieBrink)
+- Translation for create.track_target.not_straight #522
+- Allow moss carpets and snow to encase tracks (block tag railways:track_casing_whitelist)
+- Snow falls on tracks
+- `/snrc identify_train` command to get the name, uuid, and owner of the train you're looking at
+- Shadow Realm: a non-ticking, non-tangible storage for trains.
+  - `/snr shadow_realm banish <train> <key>`: banish a train to the shadow realm
+  - `/snr shadow_realm restore <key>`: restore a train from the shadow realm
+  - `/snr shadow_realm kill <key>`: permanently delete a train from the shadow realm
+  - Wrenches with the NBT tag `ShadowHammer: 1b` will pre-fill the banish command when sneak-used on a train
+- Palettes Plus
+  - 16 new colors
+  - many new locometal blocks, including ladders, windows, and more
+  - fluid paint mixing
+  - potato cannon-launched paint projectiles
+  - sandpaper can now be used to remove paint from blocks
+- New config option `unlimitedCreativeRelocation` to allow infinite-range train relocation for creative-mode players
+
+Changes
+- Smokestacks can now be placed with a variable height, similar to whistles
+- Track edge point highlighting displays signal direction
+
+Fixes
+- Conductors can once again drive trains backwards via redstone link (pr#649 by konek101)
+- 32x resource packs now work properly #549
+- Fix client-side track switch crash #536
+- Fix diagonal coupling #539
+- Rollers on upside down monorails now break/place at the correct height #470
+- Prevent creation of turns ending in generic crossings #511
+- Fix copycat headstock connectivity #512
+- Fix handcar/phantom track tooltips #658
+- Fix unfueled trains being unstoppable when realism is enabled #535
+- Fix coupler spacing value board not handling minimum value
+- Fix potential invalid signal state caused by relocation of single-carriage trains
+- Make conductors immune to fall damage again
+- Skip unnecessary buffer scouting for stationary trains
+- Animated flywheels finally spin at the correct speed
+------------------------------------------------------
+Steam 'n' Rails 1.6.15 beta
+------------------------------------------------------
+Bug Fixes
+- Fix train visuals after (de)coupling #726
+- Fix unlit casing visuals in subchunks without other visuals #722 #733
+- Fix fuel tanks preventing carriage rendering (pr #732 by femboypato) #721
+- Fix reversing handcars restoring exhaustion #716
+- Fix single-wheel medium bogey offset #702
+------------------------------------------------------
+Steam 'n' Rails 1.6.14 beta
+------------------------------------------------------
+Changes
+- Update to Create 6.0.7 and 6.0.8
+
+Bug Fixes
+- Fix residual `ForgeData.ContraptionDismountLocation` field in passengers of crashed handcars #714
+
+Removals
+- Journeymap compatibility (Create has native support now)
+------------------------------------------------------
+Steam 'n' Rails 1.6.13 alpha
+------------------------------------------------------
+Bug Fixes
+- Fix instanced carriage rendering after (de)coupling #690
+- Fix wide scotch yoke bogey model #686
+- Fix conductor toolbox crash #671
+- Fix conductor toolbox lid rendering
+------------------------------------------------------
 Steam 'n' Rails 1.6.12 alpha
 ------------------------------------------------------
 Bug Fixes
 - Fix narrow, wide, and phantom tracks rendering black boxes on transparent models #613 #637
 - Fix crash when pumping fluids through a portable fuel interface #638 #644
 - Fix semaphore arm rendering #622
+- Fix a startup crash that was apparent in larger modpacks
+- Fix bogey rendering being broken
 ------------------------------------------------------
 Steam 'n' Rails 1.6.11 alpha
 ------------------------------------------------------

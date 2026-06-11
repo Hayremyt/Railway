@@ -19,6 +19,7 @@
 package com.railwayteam.railways.config;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.io.ParsingException;
 import com.electronwill.nightconfig.toml.TomlParser;
 import com.railwayteam.railways.Railways;
 import com.railwayteam.railways.util.Utils;
@@ -109,9 +110,6 @@ public class CRConfigs {
         m.put("trainSmokePercentage", "smoke.smokePercentage");
         m.put("trainSmokeLifetime", "smoke.smokeLifetime");
         m.put("smokeTextureQuality", "smoke.smokeQuality");
-
-        m.put("journeymapObsolescenceCheckTicks", "journeymap.removeObsoleteRate");
-        m.put("journeymapUpdateTicks", "journeymap.updateRate");
 
         Map<String, String> trueMap = new HashMap<>();
         for (Map.Entry<String, String> entry : m.entrySet()) {
@@ -228,7 +226,7 @@ public class CRConfigs {
             CommentedConfig config = new TomlParser().parse(reader);
             cachedDisableDatafixer = config.<Boolean>getRaw("disableDatafixer");
             cachedRegisterMissingTracks = config.<Boolean>getRaw("registerMissingTracks");
-        } catch (IOException e) {
+        } catch (IOException | ParsingException e) {
             cachedDisableDatafixer = null;
             cachedRegisterMissingTracks = null;
         }

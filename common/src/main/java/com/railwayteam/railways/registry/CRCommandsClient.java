@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2024 The Railways Team
+ * Copyright (c) 2022-2026 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,8 +24,11 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.railwayteam.railways.registry.commands.ClearCapCacheCommand;
 import com.railwayteam.railways.registry.commands.ClearCasingCacheCommand;
+import com.railwayteam.railways.registry.commands.IdentifyTrainCommand;
+import com.railwayteam.railways.registry.commands.MixinAuditCommand;
 import com.railwayteam.railways.registry.commands.ReloadDevCapesCommand;
-import com.railwayteam.railways.registry.commands.ReloadJourneymapCommand;
+import com.railwayteam.railways.util.Utils;
+import com.railwayteam.railways.util.Utils;
 import net.minecraft.commands.SharedSuggestionProvider;
 
 import java.util.Collections;
@@ -33,14 +36,21 @@ import java.util.Collections;
 import static com.railwayteam.railways.multiloader.ClientCommands.literal;
 
 public class CRCommandsClient {
+    private static final boolean FORCE_MIXIN_AUDIT_COMMAND = Boolean.getBoolean("railways.force_mixin_audit_command");
+
     public static void register(CommandDispatcher<SharedSuggestionProvider> dispatcher) {
-        LiteralCommandNode<SharedSuggestionProvider> railwaysRoot = dispatcher.register(literal("railways_client")
-                .requires(cs -> cs.hasPermission(0))
-                .then(ClearCasingCacheCommand.register())
-                .then(ClearCapCacheCommand.register())
-                .then(ReloadJourneymapCommand.register())
-                .then(ReloadDevCapesCommand.register())
-        );
+        var railwaysCommand = literal("railways_client")
+            .requires(cs -> cs.hasPermission(0))
+            .then(ClearCasingCacheCommand.register())
+            .then(ClearCapCacheCommand.register())
+            .then(ReloadDevCapesCommand.register())
+            .then(IdentifyTrainCommand.register());
+
+        if (Utils.isDevEnv() || FORCE_MIXIN_AUDIT_COMMAND) {
+            railwaysCommand.then(MixinAuditCommand.register());
+        }
+
+        LiteralCommandNode<SharedSuggestionProvider> railwaysRoot = dispatcher.register(railwaysCommand);
 
         CommandNode<SharedSuggestionProvider> snrc = dispatcher.findNode(Collections.singleton("snrc"));
         if (snrc != null)

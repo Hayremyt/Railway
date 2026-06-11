@@ -1,6 +1,6 @@
 /*
  * Steam 'n' Rails
- * Copyright (c) 2022-2024 The Railways Team
+ * Copyright (c) 2022-2025 The Railways Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -42,10 +42,12 @@ public class ModSetup {
 
   public static void register() {
     useBaseTab();
+    CRBlockSetTypes.register();
     CRTrackMaterials.register();
     CRBogeyStyles.register();
     CRCreativeModeTabs.register();
     CRItems.register();
+    CRFluids.register();
     CRSpriteShifts.register();
     CRDisplaySources.register();
     CRDisplayTargets.register();
@@ -60,7 +62,7 @@ public class ModSetup {
     CREdgePointTypes.register();
     CRSchedule.register();
     CRDataFixers.register();
-    CRExtraRegistration.platformSpecificRegistration();
+    CRExtraRegistration.register();
     CasingCollisionUtils.register();
     CRInteractionBehaviours.register();
     CRPortalTracks.register();

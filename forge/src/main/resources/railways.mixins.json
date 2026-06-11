@@ -14,11 +14,14 @@
     "ChunkMapAccessor",
     "ChunkMapAccessor$TrackedEntityAccessor",
     "ContainerLevelAccessMixin",
+    "FluidHelperMixin",
     "FluidNetworkMixin",
+    "ItemStackMixin",
     "MixinLootDataManager",
     "RollingModeMixin",
     "ServerGamePacketListenerImplMixin",
     "TrainMixin",
+    "TrainRelocationPacketMixin",
     "self.BoilerBlockMixin"
   ],
   "injectors": {
